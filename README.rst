@@ -79,6 +79,8 @@ On your file **view.py** declare a method like this one::
         
     return lRet
 
+**Ext.Request** will manage for you all Ext JS request like return Ext Wrapper on 'api.js', execute RPC calls and Event calls.
+
 Django URL
 ----------
 
