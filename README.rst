@@ -17,9 +17,9 @@ Execute these commands::
    $ cd package
    $ python setup.py install
 
----------------------------------------
-Make available your classes and methods
----------------------------------------
+-------------------------
+Make available your class
+-------------------------
 
 Backend class
 =============
@@ -52,7 +52,7 @@ To export a python class::
         return lRet
 
 With just 3 declarations **Ext.Class**, **Ext.StaticMethod** and **Ext.StaticEvent** your class will exported to Ext JS. 
-The Ext JS wrapper will generated and returned to '**api.js**'.
+Ext JS wrapper will generate the javascript file '**api.js**'.
 
 Django configuration
 ====================
