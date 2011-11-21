@@ -26,6 +26,8 @@ Backend class
 
 To export a python class::
 
+  # file: demo/website/backend/__init__.py
+
   from EasyExtJS4 import Ext
 
   @Ext.Class(pNameSpace = 'DemoEasyExtJS4', pUrlApis = 'api.js')
@@ -62,6 +64,8 @@ Django view
 
 On your file **view.py** declare a method like this one::
 
+  # file: demo/website/demo/views.py
+
   import os.path
   from EasyExtJS4 import Ext
   from django.views.decorators.csrf import csrf_exempt
@@ -86,6 +90,8 @@ Django URL
 
 Associate this view with an url on **urls.py** like this::
 
+  # file: demo/website/urls.py
+
   from django.conf.urls.defaults import patterns, url #, include
   from website.demo.views import easyextjs4
 
@@ -107,6 +113,8 @@ Call your python class
 ----------------------
 
 You can call a method of your python class like this::
+
+  /* file: demo/website/app/view/Compute.js */
 
   handler: function(){
     ....
