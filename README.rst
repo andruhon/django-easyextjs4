@@ -120,8 +120,8 @@ On this example '**DemoEasyExtJ4**' it's the name space you declare for your cla
 Run the demo project
 --------------------
 
-
 To execute the demo project you must have the following packages installed:
+
  - Django 1.3
  - EasyExtJS4 1.0
 
