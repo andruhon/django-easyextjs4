@@ -53,13 +53,13 @@ Ext.define('DemoEasyExtJS4.view.Compute', {
                             id: 'idOp',
                             width: 150,
                             store:{
-				fields:['display','exec'],
-				data:[
-					{'display':'+', 'exec':'plus'},
-					{'display':'-', 'exec':'minus'},
-					{'display':'/', 'exec':'div'},
-					{'display':'*', 'exec':'mul'}
-				]
+                                    fields:['display','exec'],
+                                    data:[
+                                      {'display':'+', 'exec':'plus'},
+                                      {'display':'-', 'exec':'minus'},
+                                      {'display':'/', 'exec':'div'},
+                                      {'display':'*', 'exec':'mul'}
+                                    ]
                             },
                             fieldLabel: 'Operator',
                             displayField:'display',
@@ -89,15 +89,15 @@ Ext.define('DemoEasyExtJS4.view.Compute', {
                             xtype: 'button',
                             text: 'Compute',
                             handler: function(){
-                            	var lVal1 = Ext.getCmp('idVal1').value,
-                            	    lVal2 = Ext.getCmp('idVal2').value,
-                            	    lOp = Ext.getCmp('idOp'),
-                            	    lResult = Ext.getCmp('idResult'),
-                            	    lRecord = lOp.findRecordByDisplay(lOp.rawValue);
-                            	    
-                            	DemoEasyExtJS4.Compute.Execute(lVal1,lRecord.raw.exec,lVal2, function(pResult){
-                            		lResult.setValue(pResult);
-                            	})
+                              var lVal1 = Ext.getCmp('idVal1').value,
+                                  lVal2 = Ext.getCmp('idVal2').value,
+                                  lOp = Ext.getCmp('idOp'),
+                                  lResult = Ext.getCmp('idResult'),
+                                  lRecord = lOp.findRecordByDisplay(lOp.rawValue);
+                                  
+                              DemoEasyExtJS4.Compute.Execute(lVal1,lRecord.raw.exec,lVal2, function(pResult){
+                                lResult.setValue(pResult);
+                              })
                             },
                             x: 200,
                             y: 80

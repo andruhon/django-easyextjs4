@@ -1,3 +1,4 @@
+==========
 EasyExtJS4
 ==========
 
@@ -7,21 +8,26 @@ With Ext Direct you can export your API of your application.
 EasyExtJS4 is a python package. It will manage for you all the communication with ExtJS. Make available your 
 classes and methods is extremely simplified as you'll see.
 
+------------------
 Install EasyExtJS4
 ------------------
  
-Execute these commands:
+Execute these commands::
    $ cd package
    $ python setup.py install
 
+---------------------------------------
 Make available your classes and methods
 ---------------------------------------
 
-To export a python class:
+Backend class
+=============
+
+To export a python class::
 
   from EasyExtJS4 import Ext
 
-  @Ext.Class(pNameSpace = 'DemoEasyExtJS4')
+  @Ext.Class(pNameSpace = 'DemoEasyExtJS4', pUrlApis = 'api.js')
   class Compute(object):
     
     @staticmethod
@@ -44,7 +50,16 @@ To export a python class:
         lRet = "%s" % (datetime.utcnow())
         return lRet
 
-On your file view.py declare a method like this one:
+With just 3 declarations **Ext.Class**, **Ext.StaticMethod** and **Ext.StaticEvent** your class will exported to Ext JS. 
+The Ext JS wrapper will generate and return to '**api.js**'.
+
+Django configuration
+====================
+
+Django view
+-----------
+
+On your file **view.py** declare a method like this one::
 
   import os.path
   from EasyExtJS4 import Ext
@@ -63,7 +78,10 @@ On your file view.py declare a method like this one:
         
     return lRet
 
-Associate this view with an url on urls.py like this:
+Django URL
+----------
+
+Associate this view with an url on **urls.py** like this::
 
   from django.conf.urls.defaults import patterns, url #, include
   from website.demo.views import easyextjs4
@@ -72,29 +90,32 @@ Associate this view with an url on urls.py like this:
     url(r'^easyextjs4/', easyextjs4)
   )
 
-To access to your python class add this line on your index.html:
+Ext JS configuration
+====================
+
+Load wrapper
+------------
+
+To access to your python class add this line on your **index.html**::
 
   <script type="text/javascript" src="api.js"></script>
 
-With just 3 declarations Ext.Class, Ext.StaticMethod and Ext.StaticEvent your class is exported to ExtJS. And the 
-request is fully manage by Ext.Request.
+Call your python class
+----------------------
 
-To call the method of your python class from your javascript code you just have to call it like this:
+You can call a method of your python class like this::
 
   handler: function(){
-    var lVal1 = Ext.getCmp('idVal1').value,
-    lVal2 = Ext.getCmp('idVal2').value,
-    lOp = Ext.getCmp('idOp'),
-    lResult = Ext.getCmp('idResult'),
-    lRecord = lOp.findRecordByDisplay(lOp.rawValue);
+    ....
                             
     DemoEasyExtJS4.Compute.Execute(lVal1,lRecord.raw.exec,lVal2, function(pResult){
         lResult.setValue(pResult);
     })    
  
-'DemoEasyExtJ4' it's the name space you declare for your class, 'Compute' it's the class and 
-'Execute' it's a method of your class (for this example).
+On this example '**DemoEasyExtJ4**' it's the name space you declare for your class, '**Compute**' it's the class and 
+'**Execute**' it's a method of your class
 
+--------------------
 Run the demo project
 --------------------
 
@@ -102,8 +123,9 @@ To execute the demo project you must have the following packages installed:
  - Django 1.3
  - EasyExtJS4 1.0
 
-To start the demo project execute this command:
-  $ python demo/website/manage.py runserver --noreload 
+To start the demo project execute this command::
+
+	$ python demo/website/manage.py runserver --noreload 
 
 And finally open your browser and enter this URL:
   http://127.0.0.1:8000/easyextjs4/
