@@ -13,6 +13,7 @@ Install EasyExtJS4
 ------------------
  
 Execute these commands::
+
    $ cd package
    $ python setup.py install
 
