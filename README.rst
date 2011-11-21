@@ -51,7 +51,7 @@ To export a python class::
         return lRet
 
 With just 3 declarations **Ext.Class**, **Ext.StaticMethod** and **Ext.StaticEvent** your class will exported to Ext JS. 
-The Ext JS wrapper will generate and return to '**api.js**'.
+The Ext JS wrapper will generated and returned to '**api.js**'.
 
 Django configuration
 ====================
