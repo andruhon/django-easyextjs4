@@ -129,6 +129,7 @@ To start the demo project execute this command::
 
 
 And finally open your browser and enter this URL::
+
 	http://127.0.0.1:8000/easyextjs4/
 
 Tested with python 2.7.2
