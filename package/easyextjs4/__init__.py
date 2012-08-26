@@ -30,9 +30,21 @@ class Ext(object):
 
     class __Instance(object):
         pass
+    
+    class Json(object):
+        
+        @staticmethod
+        def Load(pJson):
+            lRet = json.loads(pJson)
+            return lRet
+
+        @staticmethod
+        def Dumps(pObj):
+            lRet = json.dumps(pObj,default=ExtJsonHandler)
+            return lRet
 
     @staticmethod
-    def Class(pUrlApis = None, pUrl = None, pId = None, pTimeOut = None, pNameSpace = None):
+    def Class(pUrlApis = None, pUrl = None, pId = None, pTimeOut = None, pNameSpace = None, pSession = None):
         
         if pId is not None and type(pId) != str:
             raise ExtJSError('pId must be a string')            
@@ -49,6 +61,9 @@ class Ext(object):
         if pUrlApis is not None and type(pUrlApis) != str:
             raise ExtJSError('pUrlApis must be a string')            
         
+        if pSession is not None and not inspect.isfunction(pSession):
+            raise ExtJSError('pSession must be method. This method will generate the session object for a request')
+
         if pUrlApis is None:
             pUrlApis = 'api.js'
         
@@ -70,6 +85,22 @@ class Ext(object):
             
             # Register methods
             lExt.StaticMethods = Ext.__METHODS
+
+            # Apply a session method if the Session method is not already set by the method
+            if pSession is not None:
+                for lMethod in lExt.StaticMethods:
+                    lMethodInfo = lExt.StaticMethods[lMethod] 
+                    if lMethodInfo.Session is None:
+                        lParams = list(lMethodInfo.Args)
+                        if 'pSession' not in lParams:
+                            raise ExtJSError('Method \'%s\' must declare a parameter pSession' % lMethodInfo.Name)
+                        else:
+                            # Check if pSession is the first parameter
+                            if lParams.index('pSession') != 0:
+                                raise ExtJSError('Method \'%s\' pSession must be the first parameter' % lMethodInfo.Name)
+                            lParams = [lVal for lVal in lParams if lVal != 'pSession']
+                            lMethodInfo.Session = pSession
+                            lMethodInfo.Args = lParams
 
             # Valid and store Javascript API
             if lExt.UrlApis not in Ext.__URLSAPI:
@@ -117,7 +148,7 @@ class Ext(object):
                 if lEvent.UrlApis is None:
                     lEvent.UrlApis = lExt.UrlApis
                 if lEvent.Url in Ext.__URLSEVT:     
-                    raise ExtJSError('Url "%s" for event "%s" already exist' % (lEvent.Url, lEvent.Name))            
+                    raise ExtJSError('Url "%s" for event "%s" already exist' % (lEvent.Url, lEvent.Name))
                 Ext.__URLSEVT[lEvent.Url] = pClass
                 if lEvent.UrlApis not in Ext.__URLSAPI:
                     Ext.__URLSAPI[lEvent.UrlApis] = list()
@@ -138,7 +169,7 @@ class Ext(object):
         return decorator
     
     @staticmethod
-    def StaticEvent(pId = None, pEventName = None, pClassName = None, pNameSpace = None, pParams = None, pInterval = None, pUrl = None, pUrlApis = None):
+    def StaticEvent(pId = None, pEventName = None, pClassName = None, pNameSpace = None, pParams = None, pInterval = None, pUrl = None, pUrlApis = None, pSession = None):
         
         # Define the provider id that will be define on the javascript side
         if pId is not None and type(pId) != str:
@@ -172,8 +203,11 @@ class Ext(object):
             raise ExtJSError('pUrlApis must be a string')            
         
         if pParams is not None and not (type(pParams) == list or type(pParams) == dict or type(pParams) == str or type(pParams) == int or type(pParams) == long or  type(pParams) == float):
-            raise ExtJSError('pParams must be a list, dict, string, int, long or float')            
+            raise ExtJSError('pParams must be a list, dict, string, int, long or float')
 
+        if pSession is not None and not inspect.isfunction(pSession):
+            raise ExtJSError('pSession must be method. This method will generate the session object for a request')
+        
         lEventInfo = Ext.__Instance()
         
         lEventInfo.UrlApis = pUrlApis
@@ -183,7 +217,8 @@ class Ext(object):
         lEventInfo.ClassName = pClassName
         lEventInfo.NameSpace = pNameSpace
         lEventInfo.Params = pParams
-        lEventInfo.Interval = pInterval  
+        lEventInfo.Interval = pInterval
+        lEventInfo.Session = pSession  
         
         def decorator(pEvent):
     
@@ -191,9 +226,21 @@ class Ext(object):
                 raise ExtJSError('You must declare @staticmethod before @Ext.StaticEvent')
     
             lArgs = inspect.getargspec(pEvent)
+            lParams = list(lArgs.args)
             
+            if lEventInfo.Session is not None:
+                if 'pSession' not in lArgs.args:
+                    raise ExtJSError('You must declare a parameter pSession')
+                else:
+                    # Remove pSession will be transmit automaticaly by the method Request
+                    if lParams != []:
+                        # Check if pSession is the first parameter
+                        if lParams.index('pSession') != 0:
+                            raise ExtJSError('pSession must be the first parameter')
+                        lParams = [lVal for lVal in lParams if lVal != 'pSession']
+                        
             lEventInfo.Name = pEvent.__name__
-            lEventInfo.Args = lArgs.args
+            lEventInfo.Args = lParams
             lEventInfo.VarArgs = lArgs.varargs
             lEventInfo.Keywords = lArgs.keywords
             lEventInfo.Defaults = lArgs.defaults
@@ -211,8 +258,17 @@ class Ext(object):
         return decorator
 
     @staticmethod
-    def StaticMethod(pNameParams = False, pTypeParams = False):
+    def StaticMethod(pNameParams = False, pTypeParams = False, pSession = None):
 
+        if type(pNameParams) != bool:
+            raise ExtJSError('pNameParams must be a bool. True method using naming parameters, False list of parameters')
+        
+        if type(pTypeParams) != bool:
+            raise ExtJSError('pTypeParams must be a bool. True method support type parameters, False type is not check')
+        
+        if pSession is not None and not inspect.isfunction(pSession):
+            raise ExtJSError('pSession must be method. This method will generate the session object for a request')
+        
         if sys.version_info < (3, 0) and pTypeParams == True:
             raise ExtJSError('Type for parameters not supported for Python %s. Must be Python 3.x' % ".".join(str(lVal) for lVal in sys.version_info))
         else:
@@ -222,6 +278,7 @@ class Ext(object):
         lMethodInfo = Ext.__Instance()
         lMethodInfo.NameParams = pNameParams
         lMethodInfo.TypeParams = pTypeParams
+        lMethodInfo.Session = pSession
         
         def decorator(pMethod):
     
@@ -229,9 +286,21 @@ class Ext(object):
                 raise ExtJSError('You must declare @staticmethod before @Ext.StaticMethod')
     
             lArgs = inspect.getargspec(pMethod)
+            lParams = list(lArgs.args)
+            
+            if lMethodInfo.Session is not None:
+                if 'pSession' not in lArgs.args:
+                    raise ExtJSError('You must declare a parameter pSession')
+                else:
+                    # Remove pSession will be transmit automaticaly by the method Request
+                    if lParams != []:
+                        # Check if pSession is the first parameter
+                        if lParams.index('pSession') != 0:
+                            raise ExtJSError('pSession must be the first parameter')
+                        lParams = [lVal for lVal in lParams if lVal != 'pSession']
             
             lMethodInfo.Name = pMethod.__name__
-            lMethodInfo.Args = lArgs.args
+            lMethodInfo.Args = lParams
             lMethodInfo.VarArgs = lArgs.varargs
             lMethodInfo.Keywords = lArgs.keywords
             lMethodInfo.Defaults = lArgs.defaults
@@ -427,10 +496,13 @@ class Ext(object):
                                     if lArgs is None:
                                         if len(lMethod.Args) != 0:
                                             lException['message'] = '%s numbers of parameters invalid' % lMethodName
-                                                   # Call method with no parameter 
                                         else:
                                             try:
-                                                lRetMethod = lMethod.Call()
+                                                # Call method with no parameter
+                                                if lMethod.Session is None:
+                                                    lRetMethod = lMethod.Call()
+                                                else:
+                                                    lRetMethod = lMethod.Call(pSession = lMethod.Session(pRequest))
                                                 if lRetMethod is not None:
                                                     lAnswerRPC['result'] = lRetMethod
                                             except Exception as lErr:
@@ -441,7 +513,11 @@ class Ext(object):
                                         else:
                                             try:
                                                 # Call method with list of parameters  
-                                                lRetMethod = lMethod.Call(*lArgs)
+                                                if lMethod.Session is None:
+                                                    lRetMethod = lMethod.Call(*lArgs)
+                                                else:
+                                                    lArgs.insert(0,lMethod.Session(pRequest))
+                                                    lRetMethod = lMethod.Call(*lArgs)
                                                 if lRetMethod is not None:
                                                     lAnswerRPC['result'] = lRetMethod
                                             except Exception as lErr:
@@ -462,7 +538,11 @@ class Ext(object):
                                                 else:
                                                     try:
                                                         # Call method with naming parameters
-                                                        lRetMethod = lMethod.Call(**lArgs)
+                                                        if lMethod.Session is None:
+                                                            lRetMethod = lMethod.Call(**lArgs)
+                                                        else:
+                                                            lArgs['pSession'] = lMethod.Session(pRequest)
+                                                            lRetMethod = lMethod.Call(**lArgs)
                                                         if lRetMethod is not None:
                                                             lAnswerRPC['result'] = lRetMethod
                                                     except Exception as lErr:
@@ -547,8 +627,11 @@ class Ext(object):
                             lException['message'] = '%s numbers of parameters invalid' % lEventName
                         else:
                             try:
-                                # Call event with no parameter 
-                                lRetEvt = lEvent.Call()
+                                # Call event with no parameter
+                                if lEvent.Session is None:
+                                    lRetEvt = lEvent.Call()
+                                else:
+                                    lRetEvt = lEvent.Call(pSession = lEvent.Session(pRequest))
                                 if lRetEvt is not None:
                                     lAnswerEvent['data'] = lRetEvt
                             except Exception as lErr:
@@ -559,7 +642,11 @@ class Ext(object):
                         else:
                             try:
                                 # Call event with list of parameters  
-                                lRetEvt = lEvent.Call(*lArgs)
+                                if lEvent.Session is None:
+                                    lRetEvt = lEvent.Call(*lArgs)
+                                else:
+                                    lArgs.insert(0,lMethod.Session(pRequest))
+                                    lRetEvt = lEvent.Call(*lArgs)
                                 if lRetEvt is not None:
                                     lAnswerEvent['data'] = lRetEvt
                             except Exception as lErr:
@@ -577,7 +664,11 @@ class Ext(object):
                             else:
                                 try:
                                     # Call event with naming parameters
-                                    lRetEvt = lEvent.Call(**lArgs)
+                                    if lEvent.Session is None:
+                                        lRetEvt = lEvent.Call(**lArgs)
+                                    else:
+                                        lArgs['pSession'] = lEvent.Session(pRequest)
+                                        lRetEvt = lEvent.Call(**lArgs)
                                     if lRetEvt is not None:
                                         lAnswerEvent['data'] = lRetEvt
                                 except Exception as lErr:
