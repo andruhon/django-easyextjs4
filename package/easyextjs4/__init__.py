@@ -4,6 +4,7 @@ import os, sys, functools, inspect, re, json, mimetypes
 
 from datetime import datetime
 from urlparse import urlparse
+from string import Template
 
 from django.http import HttpResponse
 
@@ -318,8 +319,11 @@ class Ext(object):
         return decorator
 
     @staticmethod
-    def Request(pRequest, pRootProject = None, pRootUrl = None, pIndex = 'index.html'):
+    def Request(pRequest, pRootProject = None, pRootUrl = None, pIndex = 'index.html', pAlias = None):
         lRet = HttpResponse(status = 400, content = '<h1>HTTP 400 - Bad Request</h1>The request cannot be fulfilled due to bad syntax.')
+
+        # Remove http://<host name>:<port>/ from pRootUrl
+        pRootUrl = urlparse(pRootUrl).path
 
         # Valid the url. 
         lPath = urlparse(pRequest.path).path
@@ -433,136 +437,128 @@ class Ext(object):
                     
                     # URL recognize as a RPC
                     
-                    if len(pRequest.POST.keys()) > 0:
+                    # Extract data from raw post. We can not trust pRequest.POST
+                    lReceiveRPCs = json.loads(pRequest.raw_post_data)
+                    
+                    # Force to be a list of dict
+                    if type(lReceiveRPCs) == dict:
+                        lReceiveRPCs = [lReceiveRPCs]
+                    
+                    # Extract URL 
+                    lClassesForUrl = Ext.__URLSRPC[lUrl]
 
-                        lClassesForUrl = Ext.__URLSRPC[lUrl]
+                    # Initialize content
+                    lContent = list()
 
-                        lContent = list()
-                        lReceiveRPCs = json.loads(pRequest.POST.keys()[0])
+                    for lReceiveRPC in lReceiveRPCs:
+                        # Execute each RPC request
                         
-                        # For just one call we receive a dict not a list of dict. Convert this dict to a list a dict.
-                        if type(lReceiveRPCs) == dict:
-                            lReceiveRPCs = [lReceiveRPCs]
-                        
-                        for lReceiveRPC in lReceiveRPCs:
-                            
-                            # Execute each RPC request
-                            
-                            lRcvClass = lReceiveRPC['action']
-                            lRcvMethod = lReceiveRPC['method']
+                        lRcvClass = lReceiveRPC['action']
+                        lRcvMethod = lReceiveRPC['method']
 
-                            # Create name API
-                            lMethodName = lRcvClass + '.' + lRcvMethod
-                                
-                            # Prepare answer
-                            lAnswerRPC = dict(type = 'rpc', tid = lReceiveRPC['tid'], action = lRcvClass, method = lRcvMethod)
+                        # Create name API
+                        lMethodName = lRcvClass + '.' + lRcvMethod
                             
-                            # Prepare exception
-                            lExceptionData = dict(Url = lUrl, Type = 'rpc', Tid = lReceiveRPC['tid'], Name = lMethodName )
-                            lException = dict(type = 'exception', data = lExceptionData, message = None)
+                        # Prepare answer
+                        lAnswerRPC = dict(type = 'rpc', tid = lReceiveRPC['tid'], action = lRcvClass, method = lRcvMethod)
+                        
+                        # Prepare exception
+                        lExceptionData = dict(Url = lUrl, Type = 'rpc', Tid = lReceiveRPC['tid'], Name = lMethodName )
+                        lException = dict(type = 'exception', data = lExceptionData, message = None)
+                        
+                        if lRcvClass in lClassesForUrl:
                             
-                            if lRcvClass in lClassesForUrl:
+                            # URL for RPC founded
+                            lClass = lClassesForUrl[lRcvClass]
+                            lExt = lClass.__ExtJS
+                            
+                            if lRcvMethod in lExt.StaticMethods:
                                 
-                                # URL for RPC founded
-                                lClass = lClassesForUrl[lRcvClass]
-                                lExt = lClass.__ExtJS
+                                # Method founded
+                                lMethod = lExt.StaticMethods[lRcvMethod]
                                 
-                                if lRcvMethod in lExt.StaticMethods:
-                                    
-                                    # Method founded
-                                    lMethod = lExt.StaticMethods[lRcvMethod]
-                                    
-                                    # Name used for exception message
-                                    if lExt.NameSpace is not None:
-                                        lMethodName = lExt.NameSpace + '.' + lMethodName 
-    
-                                    # Add Id if it's define
-                                    if lExt.Id is not None:
-                                        lExceptionData['Id'] = lExt.Id
-                                    
-                                    # Extract datas
-                                    lArgs = lReceiveRPC['data']
-                                    
-                                    # Arguments could be define as dictionary for naming parameter or as array of parameters 
-                                    if type(lArgs) == list and len(lArgs) == 2 and (type(lArgs[0]) == dict or type(lArgs[0]) == list) and lArgs[1] is None:
-                                        if type(lArgs[0]) == dict:
-                                            lArgs = lArgs[0]
-                                        elif type(lArgs[0]) == list and type(lArgs[0][0]) == dict:
-                                            lArgs = lArgs[0][0]
-                                        else:
-                                            lArgs = None
-                                    
-                                    # Control and call method  
-                                    if lArgs is None:
-                                        if len(lMethod.Args) != 0:
-                                            lException['message'] = '%s numbers of parameters invalid' % lMethodName
-                                        else:
-                                            try:
-                                                # Call method with no parameter
-                                                if lMethod.Session is None:
-                                                    lRetMethod = lMethod.Call()
-                                                else:
-                                                    lRetMethod = lMethod.Call(pSession = lMethod.Session(pRequest))
-                                                if lRetMethod is not None:
-                                                    lAnswerRPC['result'] = lRetMethod
-                                            except Exception as lErr:
-                                                lException['message'] = '%s: %s' % (lMethodName, str(lErr)) 
-                                    elif type(lArgs) == list:
-                                        if len(lArgs) > len(lMethod.Args):
-                                            lException['message'] = '%s numbers of parameters invalid' % lMethodName
-                                        else:
-                                            try:
-                                                # Call method with list of parameters  
-                                                if lMethod.Session is None:
-                                                    lRetMethod = lMethod.Call(*lArgs)
-                                                else:
-                                                    lArgs.insert(0,lMethod.Session(pRequest))
-                                                    lRetMethod = lMethod.Call(*lArgs)
-                                                if lRetMethod is not None:
-                                                    lAnswerRPC['result'] = lRetMethod
-                                            except Exception as lErr:
-                                                lException['message'] = '%s: %s' % (lMethodName, str(lErr)) 
-                                    elif type(lArgs) == dict:
-                                        if not lMethod.NameParams:
-                                            lException['message'] = '%s does not support named parameters' % lMethodName
-                                        else: 
-                                            if len(lArgs.keys()) > len(lMethod.Args):
-                                                lException['message'] = '%s numbers of parameters invalid' % lMethodName
+                                # Name used for exception message
+                                if lExt.NameSpace is not None:
+                                    lMethodName = lExt.NameSpace + '.' + lMethodName 
+
+                                # Add Id if it's define
+                                if lExt.Id is not None:
+                                    lExceptionData['Id'] = lExt.Id
+                                
+                                # Extract datas
+                                lArgs = lReceiveRPC['data']
+                                
+                                # Control and call method  
+                                if lArgs is None:
+                                    if len(lMethod.Args) != 0:
+                                        lException['message'] = '%s numbers of parameters invalid' % lMethodName
+                                    else:
+                                        try:
+                                            # Call method with no parameter
+                                            if lMethod.Session is None:
+                                                lRetMethod = lMethod.Call()
                                             else:
-                                                lInvalidParam = list()
-                                                for lParam in lArgs:
-                                                    if lParam not in lMethod.Args:
-                                                         lInvalidParam.append(lParam)
-                                                if len(lInvalidParam) > 0:
-                                                    lException['message'] = '%s: Parameters unknown -> %s' % ",".join(lInvalidParam) 
-                                                else:
-                                                    try:
-                                                        # Call method with naming parameters
-                                                        if lMethod.Session is None:
-                                                            lRetMethod = lMethod.Call(**lArgs)
-                                                        else:
-                                                            lArgs['pSession'] = lMethod.Session(pRequest)
-                                                            lRetMethod = lMethod.Call(**lArgs)
-                                                        if lRetMethod is not None:
-                                                            lAnswerRPC['result'] = lRetMethod
-                                                    except Exception as lErr:
-                                                        lException['message'] = '%s: %s' % (lMethodName, str(lErr))
-                                else:
-                                    lException['message'] = '%s: API not found' % lMethodName
-                                    
+                                                lRetMethod = lMethod.Call(pSession = lMethod.Session(pRequest))
+                                            if lRetMethod is not None:
+                                                lAnswerRPC['result'] = lRetMethod
+                                        except Exception as lErr:
+                                            lException['message'] = '%s: %s' % (lMethodName, str(lErr)) 
+                                elif type(lArgs) == list:
+                                    if len(lArgs) > len(lMethod.Args):
+                                        lException['message'] = '%s numbers of parameters invalid' % lMethodName
+                                    else:
+                                        try:
+                                            # Call method with list of parameters  
+                                            if lMethod.Session is None:
+                                                lRetMethod = lMethod.Call(*lArgs)
+                                            else:
+                                                lArgs.insert(0,lMethod.Session(pRequest))
+                                                lRetMethod = lMethod.Call(*lArgs)
+                                            if lRetMethod is not None:
+                                                lAnswerRPC['result'] = lRetMethod
+                                        except Exception as lErr:
+                                            lException['message'] = '%s: %s' % (lMethodName, str(lErr)) 
+                                elif type(lArgs) == dict:
+                                    if not lMethod.NameParams:
+                                        lException['message'] = '%s does not support named parameters' % lMethodName
+                                    else: 
+                                        if len(lArgs.keys()) > len(lMethod.Args):
+                                            lException['message'] = '%s numbers of parameters invalid' % lMethodName
+                                        else:
+                                            lInvalidParam = list()
+                                            for lParam in lArgs:
+                                                if lParam not in lMethod.Args:
+                                                     lInvalidParam.append(lParam)
+                                            if len(lInvalidParam) > 0:
+                                                lException['message'] = '%s: Parameters unknown -> %s' % ",".join(lInvalidParam) 
+                                            else:
+                                                try:
+                                                    # Call method with naming parameters
+                                                    if lMethod.Session is None:
+                                                        lRetMethod = lMethod.Call(**lArgs)
+                                                    else:
+                                                        lArgs['pSession'] = lMethod.Session(pRequest)
+                                                        lRetMethod = lMethod.Call(**lArgs)
+                                                    if lRetMethod is not None:
+                                                        lAnswerRPC['result'] = lRetMethod
+                                                except Exception as lErr:
+                                                    lException['message'] = '%s: %s' % (lMethodName, str(lErr))
                             else:
                                 lException['message'] = '%s: API not found' % lMethodName
-                                    
-                            if lException['message'] is not None:
-                                lContent.append(lException)    
-                            else:
-                                lContent.append(lAnswerRPC)
                                 
-                        if len(lContent) > 0:
-                            if len(lContent) == 1:
-                                lRet = HttpResponse(content = json.dumps(lContent[0],default=ExtJsonHandler), mimetype='application/json')
-                            else:
-                                lRet = HttpResponse(content = json.dumps(lContent,default=ExtJsonHandler), mimetype='application/json')
+                        else:
+                            lException['message'] = '%s: API not found' % lMethodName
+                                
+                        if lException['message'] is not None:
+                            lContent.append(lException)    
+                        else:
+                            lContent.append(lAnswerRPC)
+                            
+                    if len(lContent) > 0:
+                        if len(lContent) == 1:
+                            lRet = HttpResponse(content = json.dumps(lContent[0],default=ExtJsonHandler), mimetype='application/json')
+                        else:
+                            lRet = HttpResponse(content = json.dumps(lContent,default=ExtJsonHandler), mimetype='application/json')
                                 
                 elif lUrl in Ext.__URLSEVT:
 
