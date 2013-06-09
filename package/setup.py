@@ -9,7 +9,7 @@ setup(name='django-easyextjs4',
       author_email='chbperso@gmail.com',
       url='https://github.com/TofPlay/django-easyextjs4',
       packages=['EasyExtJS4'],
-      package_dir={'EasyExtJS4':'easyextjs4'},
+      package_dir={'EasyExtJS4':'EasyExtJS4'},
       package_data={'EasyExtJS4':['LICENCE.txt']},
       classifiers=[
               'Development Status :: 4 - Beta',
