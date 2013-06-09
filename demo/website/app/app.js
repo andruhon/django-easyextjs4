@@ -15,8 +15,8 @@ Ext.application({
 		// Event			
 		lOnEvent1Cpt = 1;
 
-		Ext.direct.Manager.on('DemoEasyExtJS4.Compute.Event', function(event){
-			var lMsg = 'Event: [' + lOnEvent1Cpt + '] ' + event.data,
+		Ext.direct.Manager.on('DemoEasyExtJS4.Compute.Event', function(pEvent){
+			var lMsg = 'Event: [' + lOnEvent1Cpt + '] ' + pEvent.data,
 			    lEventMsg = Ext.getCmp('idEvent'); 
 	            	Ext.log(lMsg);
 			lEventMsg.setText(lMsg);
@@ -24,16 +24,16 @@ Ext.application({
 		});
 
 		// Display a message box if an exception on the server occur
-		Ext.direct.Manager.on('exception', function(e) {
-			if (e == null || e.code == 'xhr') return;
-			if (e.data.Type == 'event'){
-				lPoll = Ext.direct.Manager.getProvider(e.data.Id);
+		Ext.direct.Manager.on('exception', function(pException) {
+			if (pException == null || pException.code == 'xhr') return;
+			if (pException.data.Type == 'event'){
+				lPoll = Ext.direct.Manager.getProvider(pException.data.Id);
 				lPoll.disconnect();
 			}
-			Ext.log({level: 'error', msg:'Exception: ' + e.message});
+			Ext.log({level: 'error', msg:'Exception: ' + pException.message});
 			Ext.Msg.show({
 			           title:'Exception',
-			           msg: e.message,
+			           msg: pException.message,
 			           buttons: Ext.Msg.OK,
 			           icon: Ext.Msg.ERROR
 			});

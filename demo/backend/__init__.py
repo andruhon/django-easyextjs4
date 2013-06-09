@@ -3,12 +3,15 @@
 from datetime import datetime
 from EasyExtJS4 import Ext
 
-@Ext.Class(pNameSpace = 'DemoEasyExtJS4')
+def DjangoSession(pRequest):
+    return pRequest.session
+
+@Ext.Class(pNameSpace = 'DemoEasyExtJS4', pSession = DjangoSession)
 class Compute(object):
 
     @staticmethod
     @Ext.StaticMethod()
-    def Execute(pVal1, pOp, pVal2):
+    def Execute(pSession, pVal1, pOp, pVal2):
         if pOp == 'plus':
             lRet = pVal1 + pVal2
         elif pOp == 'minus':
@@ -18,10 +21,11 @@ class Compute(object):
         elif pOp == 'mul':
             lRet = pVal1 * pVal2
             
+        pSession['Compute']     
         return lRet
     
     @staticmethod
     @Ext.StaticEvent()
-    def Event():
-        lRet = "%s" % (datetime.utcnow())
+    def Event(pSession):
+        lRet = "{}".format(datetime.utcnow())
         return lRet
