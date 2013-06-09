@@ -16,10 +16,15 @@ Ext.application({
 		lOnEvent1Cpt = 1;
 
 		Ext.direct.Manager.on('DemoEasyExtJS4.Compute.Event', function(pEvent){
-			var lMsg = 'Event: [' + lOnEvent1Cpt + '] ' + pEvent.data,
-			    lEventMsg = Ext.getCmp('idEvent'); 
-	            	Ext.log(lMsg);
-			lEventMsg.setText(lMsg);
+			var lMsgEvent = 'Event: [' + lOnEvent1Cpt + '] ' + pEvent.data[0],
+				lMsgExecute = 'Execute: ' + pEvent.data[1],
+			    lEvent = Ext.getCmp('idEvent'),
+			    lExecute = Ext.getCmp('idExecute'); 
+	        
+	        Ext.log(lMsgEvent);
+	        Ext.log(lMsgExecute);
+			lEvent.setText(lMsgEvent);
+			lExecute.setText(lMsgExecute);
 			lOnEvent1Cpt++;
 		});
 

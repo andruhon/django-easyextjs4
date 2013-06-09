@@ -20,12 +20,12 @@ class Compute(object):
             lRet = pVal1 / pVal2
         elif pOp == 'mul':
             lRet = pVal1 * pVal2
-            
-        pSession['Compute']     
+          
+        pSession['Execute'] = pSession.get('Execute',0) + 1   
         return lRet
     
     @staticmethod
     @Ext.StaticEvent()
     def Event(pSession):
-        lRet = "{}".format(datetime.utcnow())
+        lRet = ["{}".format(datetime.utcnow()), pSession.get('Execute',0)]
         return lRet

@@ -18,7 +18,7 @@ Ext.define('DemoEasyExtJS4.view.Compute', {
                     xtype: 'form',
                     id:'idForm',
                     frame: true,
-                    height: 180,
+                    height: 200,
                     width: 270,
                     layout: {
                         type: 'absolute'
@@ -95,6 +95,16 @@ Ext.define('DemoEasyExtJS4.view.Compute', {
                             text: 'Event',
                             x: 10,
                             y: 120
+                        },
+                        {
+                            xtype: 'label',
+                            id: 'idExecute',
+                            border: '10 5 3 10',
+                            height: 20,
+                            width: 260,
+                            text: 'Execute',
+                            x: 10,
+                            y: 140
                         }
                     ]
                 }
