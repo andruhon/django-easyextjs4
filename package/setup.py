@@ -3,7 +3,7 @@
 from distutils.core import setup
 
 setup(name='django-easyextjs4',
-      version='1.0',
+      version='1.1',
       description='Django extension for ExtJS 4',
       author='Christophe Braud',
       author_email='chbperso@gmail.com',
