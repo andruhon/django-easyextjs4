@@ -372,7 +372,7 @@ class Ext(object):
                         lRemoteAPI[lExt.Url] = dict()
                         lCurrent = lRemoteAPI[lExt.Url]
                         if 'format' in pRequest.REQUEST and pRequest.REQUEST['format'] == 'json':
-                            # 'descriptor' is need it for Ext Designer to recognize your API
+                            # 'descriptor' is need it for Sencha Architect to recognize your API
                             lCurrent['descriptor'] = lClass.__name__ + '.REMOTING_API'
                             if lExt.NameSpace is not None:
                                  lCurrent['descriptor'] = lExt.NameSpace + '.' + lCurrent['descriptor']
@@ -430,15 +430,19 @@ class Ext(object):
                 if len(lRemoteAPI) > 0:    
                     lJsonRemoteAPI = json.dumps(lRemoteAPI.values(),default=ExtJsonHandler)
                     
+                    lNameSpace = lClass.__name__
+                    if lExt.NameSpace is not None:
+                        lNameSpace = lExt.NameSpace + '.' + lNameSpace
+                    
                     if 'format' in pRequest.REQUEST and pRequest.REQUEST['format'] == 'json':
-                        # Ext Designer ask for a JSON format
-                        lRet = HttpResponse(content = lJsonRemoteAPI[1:len(lJsonRemoteAPI)-1], mimetype='application/json') 
+                        # Define JSON format for Sencha Architect
+                        lContent = 'Ext.require(\'Ext.direct.*\');Ext.namespace(\''+ lNameSpace +'\');'+ lNameSpace + '.REMOTING_API = ' + lJsonRemoteAPI[1:len(lJsonRemoteAPI)-1] + ';'
                     else:
                         # Otherwise it's return a Javascript. Each javascript must be include under the index.html like this:
                         # <script type="text/javascript" src="api.js"></script>
                         # Automatically your API is declare on ExtJS and available on your app.js. 
-                        lContent = 'Ext.require(\'Ext.direct.*\');Ext.onReady( function() { Ext.direct.Manager.addProvider(' + lJsonRemoteAPI[1:len(lJsonRemoteAPI)-1] + ');});'
-                        lRet = HttpResponse(content = lContent, mimetype='application/javascript')
+                        lContent = 'Ext.require(\'Ext.direct.*\');Ext.namespace(\''+ lNameSpace +'\');Ext.onReady( function() { Ext.direct.Manager.addProvider(' + lJsonRemoteAPI[1:len(lJsonRemoteAPI)-1] + ');});'
+                    lRet = HttpResponse(content = lContent, mimetype='application/javascript')
         else:
             # Detect if the URL it's a RPC or a Poll request
             lUrlRPCsorPolls = re.search('^(\w*)$', lPath)
@@ -451,7 +455,7 @@ class Ext(object):
                     # URL recognize as a RPC
                     
                     # Extract data from raw post. We can not trust pRequest.POST
-                    lReceiveRPCs = json.loads(pRequest.raw_post_data)
+                    lReceiveRPCs = json.loads(pRequest.body)
                     
                     # Force to be a list of dict
                     if type(lReceiveRPCs) == dict:
