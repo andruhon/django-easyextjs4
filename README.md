@@ -3,7 +3,7 @@
 Ext JS 4 it's powerfull javascript framework very insteresting if you want to develop professional web interface. 
 Ext JS 4 provide a very powerfull mechanism to communicate with the backend: Ext Direct. 
 With Ext Direct you can export your API of your application. 
-EasyExtJS4 is a python package. It will manage for you all the communication with ExtJS. Make available your 
+EasyExtJS4 is a python package. It will manage for you all the communication with ExtJS (also comptable with Sencha Touch). Make available your 
 classes and methods is extremely simplified as you'll see.
 
 ## History
@@ -30,10 +30,7 @@ To export a python class:
   from datetime import datetime
   from EasyExtJS4 import Ext
 
-  def DjangoSession(pRequest):
-    return pRequest.session
-
-  @Ext.Class(pNameSpace = 'DemoEasyExtJS4', pSession = DjangoSession)
+  @Ext.Class(pNameSpace = 'DemoEasyExtJS4', pSession = True)
   class Compute(object):
 
     @staticmethod
@@ -63,7 +60,8 @@ Ext JS wrapper will generate the javascript file `api.js`.
 
 #### Session
 
-`pSession` is optional but when it's specify with `Ext.Class`, `Ext.StaticMethod` and `Ext.StaticEvent` it must be a method that return the current session of the user and it will be transmit to your method as the first parameter.
+`pSession` is optional but when it's specify with `Ext.Class`, `Ext.StaticMethod` and `Ext.StaticEvent` it must be a method that return the current session of the user and it will be transmit to your method as the first parameter. 
+If you specified `True` EasyExtJS4 will automatically extract the session object from the Django request.
 
 * *Class session*: To manage a session for all methods and events of your class set `pSession` to `Ext.Class`.
 * *Method/Event session*: To manage a session for just a few methods or events set `pSession` to `Ext.StaticMethod` and/or `Ext.StaticEvent`. `pSession` of `Ext.StaticMethod` and `Ext.StaticEvent` will overwrite `pSession` define with `Ext.Class`.
@@ -139,7 +137,7 @@ You can call a method of your python class like this:
                         
   DemoEasyExtJS4.Compute.Execute(lVal1,lRecord.raw.exec,lVal2, function(pResult){
       lResult.setValue(pResult);
-  })    
+  });    
   ``` 
 On this example `DemoEasyExtJ4` it's the name space you declare for your class, `Compute` it's the class and 
 `Execute` it's a method of your class

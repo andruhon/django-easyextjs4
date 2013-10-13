@@ -74,7 +74,7 @@ Ext.define('DemoEasyExtJS4.view.Compute', {
                                   
                               DemoEasyExtJS4.Compute.Execute(lVal1,lRecord.raw.exec,lVal2, function(pResult){
                                 lResult.setValue(pResult);
-                              })
+                              });
                             },
                             x: 180,
                             y: 60

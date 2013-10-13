@@ -3,10 +3,7 @@
 from datetime import datetime
 from EasyExtJS4 import Ext
 
-def DjangoSession(pRequest):
-    return pRequest.session
-
-@Ext.Class(pNameSpace = 'DemoEasyExtJS4', pSession = DjangoSession)
+@Ext.Class(pNameSpace = 'DemoEasyExtJS4', pSession = True)
 class Compute(object):
 
     @staticmethod
@@ -29,3 +26,4 @@ class Compute(object):
     def Event(pSession):
         lRet = ["{}".format(datetime.utcnow()), pSession.get('Execute',0)]
         return lRet
+    

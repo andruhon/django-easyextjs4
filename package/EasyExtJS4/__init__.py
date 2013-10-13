@@ -43,27 +43,34 @@ class Ext(object):
         def Dumps(pObj):
             lRet = json.dumps(pObj,default=ExtJsonHandler)
             return lRet
+        
+    @staticmethod
+    def sessionFromRequest(pRequest):
+        return pRequest.session
 
     @staticmethod
     def Class(pUrlApis = None, pUrl = None, pId = None, pTimeOut = None, pNameSpace = None, pSession = None):
         
-        if pId is not None and type(pId) != str:
+        if pId is not None and not isinstance(pId,str):
             raise ExtJSError('pId must be a string')            
         
-        if pNameSpace is not None and type(pNameSpace) != str:
+        if pNameSpace is not None and not isinstance(pNameSpace,str):
             raise ExtJSError('pNameSpace must be a string')            
         
-        if pTimeOut is not None and type(pTimeOut) != int:
+        if pTimeOut is not None and not isinstance(pTimeOut,int):
             raise ExtJSError('pTimeOut must be an integer')            
         
-        if pUrl is not None and type(pUrl) != str:
+        if pUrl is not None and not isinstance(pUrl,str):
             raise ExtJSError('pUrl must be a string')            
         
-        if pUrlApis is not None and type(pUrlApis) != str:
+        if pUrlApis is not None and not isinstance(pUrlApis,str):
             raise ExtJSError('pUrlApis must be a string')            
         
-        if pSession is not None and not inspect.isfunction(pSession):
-            raise ExtJSError('pSession must be method. This method will generate the session object for a request')
+        if pSession is not None:
+            if isinstance(pSession,bool) and pSession == True:
+                pSession = Ext.sessionFromRequest
+            elif not inspect.isfunction(pSession):
+                raise ExtJSError('pSession must be method or boolean. If it\'s a method it must return a session object. If it\'s boolean with True it will return session from a django request.')
 
         if pUrlApis is None:
             pUrlApis = 'api.js'
@@ -186,41 +193,44 @@ class Ext(object):
     def StaticEvent(pId = None, pEventName = None, pClassName = None, pNameSpace = None, pParams = None, pInterval = None, pUrl = None, pUrlApis = None, pSession = None):
         
         # Define the provider id that will be define on the javascript side
-        if pId is not None and type(pId) != str:
+        if pId is not None and not isinstance(pId,str):
             raise ExtJSError('pId must be a string')            
         
         # Force the event name that will be fire on the javascript side. If it's not specify the event name it's build automatically with the concatanation of
         # the name space, the classe name and the Python function name define as an event
-        if pEventName is not None and type(pEventName) != str:
+        if pEventName is not None and not isinstance(pEventName,str):
             raise ExtJSError('pEventName must be a string')            
 
         # You can overwrite the classe but becarefull. The class name will be use to build the name of the event when the answer of the event it sent back.
         # If it's not specify it will take the name of the class
-        if pClassName is not None and type(pClassName) != str:
+        if pClassName is not None and not isinstance(pClassName,str):
             raise ExtJSError('pClassName must be a string')            
         
         # pNameSpace is define to create a uniq name. Your must be sure it doesn't exist. If it's not specify it will take the name space of the class
-        if pNameSpace is not None and type(pNameSpace) != str:
+        if pNameSpace is not None and not isinstance(pNameSpace,str):
             raise ExtJSError('pNameSpace must be a string')            
         
         # pInterval define how often to poll the server-side in milliseconds. If it's not define by default it's set to every 3 seconds by ExtJS. 
-        if pInterval is not None and type(pInterval) != int:
+        if pInterval is not None and not isinstance(pInterval,int):
             raise ExtJSError('pInterval must be an integer')            
         
         # Specify the keywork for the URL. This keywork will be associate with the current event. The URL must be uniq for each event. 
         # By default the URL it's build like this: 'Evt' + '<Name space>' + '<Class name>' + 'Event Name' 
-        if pUrl is not None and type(pUrl) != str:
+        if pUrl is not None and not isinstance(pUrl,str):
             raise ExtJSError('pUrl must be a string')            
 
         # Specify the javascript file. If it's not define it will take the same as one define for the class.
-        if pUrlApis is not None and type(pUrlApis) != str:
+        if pUrlApis is not None and not isinstance(pUrlApis,str):
             raise ExtJSError('pUrlApis must be a string')            
         
         if pParams is not None and not (type(pParams) == list or type(pParams) == dict or type(pParams) == str or type(pParams) == int or type(pParams) == long or  type(pParams) == float):
             raise ExtJSError('pParams must be a list, dict, string, int, long or float')
 
-        if pSession is not None and not inspect.isfunction(pSession):
-            raise ExtJSError('pSession must be a method. This method will generate the session object for a request')
+        if pSession is not None:
+            if isinstance(pSession,bool) and pSession == True:
+                pSession = Ext.sessionFromRequest
+            elif not inspect.isfunction(pSession):
+                raise ExtJSError('pSession must be method or boolean. If it\'s a method it must return a session object. If it\'s boolean with True it will return session from a django request.')
         
         lEventInfo = Ext.__Instance()
         
@@ -274,14 +284,17 @@ class Ext(object):
     @staticmethod
     def StaticMethod(pNameParams = False, pTypeParams = False, pSession = None):
 
-        if type(pNameParams) != bool:
+        if not isinstance(pNameParams,bool):
             raise ExtJSError('pNameParams must be a bool. True method using naming parameters, False list of parameters')
         
-        if type(pTypeParams) != bool:
+        if not isinstance(pTypeParams,bool):
             raise ExtJSError('pTypeParams must be a bool. True method support type parameters, False type is not check')
         
-        if pSession is not None and not inspect.isfunction(pSession):
-            raise ExtJSError('pSession must be method. This method will generate the session object for a request')
+        if pSession is not None:
+            if isinstance(pSession,bool) and pSession == True:
+                pSession = Ext.sessionFromRequest
+            elif not inspect.isfunction(pSession):
+                raise ExtJSError('pSession must be method or boolean. If it\'s a method it must return a session object. If it\'s boolean with True it will return session from a django request.')
         
         if sys.version_info < (3, 0) and pTypeParams == True:
             raise ExtJSError('Type for parameters not supported for Python %s. Must be Python 3.x' % ".".join(str(lVal) for lVal in sys.version_info))
