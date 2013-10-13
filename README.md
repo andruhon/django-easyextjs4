@@ -25,7 +25,7 @@ $ python setup.py install
 
 To export a python class:
   ```python
-  # file: demo/backend/__init__.py
+  # file: demo/website/demo/__init__.py
 
   from datetime import datetime
   from EasyExtJS4 import Ext
