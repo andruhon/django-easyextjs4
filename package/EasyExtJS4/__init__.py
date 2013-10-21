@@ -728,10 +728,16 @@ class Ext(object):
             if not os.path.exists(lPath):
                 raise ExtJSError('File not found: "%s"' % lPath)
             else:
-                if lFileExt not in ['.html','.css','.js','.png','.jpg','.gif']:
+                if lFileExt not in ['.html','.css','.js','.png','.jpg','.gif','.json','.xml']:
                     raise ExtJSError('File extension is invalid: "%s"' % lFileExt)
                 else:
-                    lMime = mimetypes.types_map[lFileExt]
+                    try:
+                        lMime = mimetypes.types_map[lFileExt]
+                    except Exception as lException:
+                        if isinstance(lException,KeyError) and lFileExt == '.json':
+                            lMime = 'text/json'
+                        else:
+                            raise lException
                     # TODO: Manage a chache file
                     lFile = open(lPath)
                     lContent = lFile.read()
