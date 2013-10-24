@@ -2,7 +2,7 @@
 Ext JS 4 it's powerfull javascript framework very insteresting if you want to develop professional web interface. 
 Ext JS 4 provide a very powerfull mechanism to communicate with the backend: Ext Direct. 
 With Ext Direct you can export your API of your application. 
-EasyExtJS4 is a python package. It will manage for you all the communication with ExtJS (also comptable with Sencha Touch). Make available your 
+EasyExtJS4 is a python package. It will manage for you all the communication with ExtJS (also compatible with Sencha Touch). Make available your 
 classes and methods is extremely simplified as you'll see.
 
 ## History
