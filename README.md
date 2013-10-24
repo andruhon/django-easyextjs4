@@ -1,4 +1,3 @@
-
 # EasyExtJS4
 Ext JS 4 it's powerfull javascript framework very insteresting if you want to develop professional web interface. 
 Ext JS 4 provide a very powerfull mechanism to communicate with the backend: Ext Direct. 
@@ -13,10 +12,26 @@ classes and methods is extremely simplified as you'll see.
 
 ## Install EasyExtJS4
 
-Execute these commands:
-```bash 
-$ cd package
-$ python setup.py install
+Install virtualenvwrapper:
+```bash
+$ pip install virtualenvwrapper
+```
+Create a virtual environment for EasyExtJS4:
+```bash
+$ mkvirtualenv easyextjs4
+(easyextjs4) $ 
+```
+Install Django, PySqlite and EasyExtJS4:
+```bash
+(easyextjs4) $ pip install django pysqlite django-easyextjs4
+```
+Check that all installed:
+```bash
+(easyextjs4) $ pip freeze
+Django==1.5.4
+django-easyextjs4==1.1
+pysqlite==2.6.3
+wsgiref==0.1.2
 ```
 
 ## Make available your class
@@ -150,9 +165,9 @@ To execute the demo project you must have the following packages installed:
 * EasyExtJS4 1.1
 
 To start the demo project execute this command:
-  ```bash
-  $ python demo/manage.py runserver --noreload 
-  ```
+```bash
+(easyextjs4) $ python demo/manage.py runserver --noreload 
+```
 And finally open your browser and enter this URL:
 
 	http://127.0.0.1:8000/
