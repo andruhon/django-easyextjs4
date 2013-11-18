@@ -157,7 +157,7 @@ You can call a method of your python class like this:
 On this example `DemoEasyExtJ4` it's the name space you declare for your class, `Compute` it's the class and 
 `Execute` it's a method of your class
 
-## Run the demo project
+## Quick demo project
 
 To execute the demo project you must have the following packages installed:
 
@@ -173,3 +173,7 @@ And finally open your browser and enter this URL:
 	http://127.0.0.1:8000/
 
 Tested with python 2.7.5
+
+## Full demo project
+
+For a full demo project see [Hours Tracker](https://github.com/TofPlay/HoursTracker)
