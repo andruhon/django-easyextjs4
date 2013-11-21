@@ -10,6 +10,11 @@ classes and methods is extremely simplified as you'll see.
 * 1.0 : First version
 * 1.1 : Add support of session
 
+## Develop with
+* [Python](http://www.python.org/) 2.7.5
+* [Django](https://www.djangoproject.com/) 1.5.4
+* [Aptana](http://www.aptana.com/) 3.4.2
+
 ## Install EasyExtJS4
 
 Install virtualenvwrapper:
@@ -158,11 +163,6 @@ On this example `DemoEasyExtJ4` it's the name space you declare for your class, 
 `Execute` it's a method of your class
 
 ## Quick demo project
-
-To execute the demo project you must have the following packages installed:
-
-* Django 1.5.1
-* EasyExtJS4 1.1
 
 To start the demo project execute this command:
 ```bash
