@@ -176,8 +176,6 @@ You should see:
 
 ![Screenshot quick demo project](https://github.com/TofPlay/django-easyextjs4/blob/master/Screenshot.png?raw=true)
 
-Tested with python 2.7.5
-
 ## Full demo project
 
 For a full demo project see [Hours Tracker](https://github.com/TofPlay/HoursTracker)
