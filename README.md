@@ -172,6 +172,9 @@ And finally open your browser and enter this URL:
 
 	http://127.0.0.1:8000/
 
+You should see:
+![Donate](https://github.com/TofPlay/django-easyextjs4/blob/master/Screenshot.png?raw=true)
+
 Tested with python 2.7.5
 
 ## Full demo project
