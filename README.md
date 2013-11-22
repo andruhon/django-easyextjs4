@@ -5,6 +5,9 @@ With Ext Direct you can export your API of your application.
 EasyExtJS4 is a python package. It will manage for you all the communication with ExtJS (also compatible with Sencha Touch). Make available your 
 classes and methods is extremely simplified as you'll see.
 
+## Donate
+You like this project. You want this project continues to evolve. You want me to publish projects even more interesting. So don't forget to click on the "Donate" button to the right of the project name.
+
 ## History
 
 * 1.0 : First version
