@@ -1,12 +1,16 @@
 # For the licence see the file : LICENCE.txt
-
-import os, sys, functools, inspect, re, json, mimetypes
-
+# this is simplified modification of https://github.com/TofPlay/django-easyextjs4
 from datetime import datetime
-from urlparse import urlparse
+import os, sys, functools, inspect, re, json, mimetypes
+import pdb
 from string import Template
+from urlparse import urlparse
 
 from django.http import HttpResponse
+
+
+#TODO define global config rather than use bunch of variables to pass into
+ACTION_SUFFIX = "RemoteProcedures"
 
 __all__ = ['Ext']
 
@@ -25,9 +29,7 @@ class Ext(object):
 
     __URLSAPI = dict()  # List of *.js file API. Each URL point to a list of class.
     __URLSRPC = dict()  # URL for RPC. Each URL point to a list of class.
-    __URLSEVT = dict()  # URL for Event. Each URL point to a class.
     __METHODS = dict()  # Temporary used to build internal structur for RPC
-    __EVENTS = dict()   # Temporary used to build internal structur for event
 
     class __Instance(object):
         pass
@@ -43,13 +45,9 @@ class Ext(object):
         def Dumps(pObj):
             lRet = json.dumps(pObj,default=ExtJsonHandler)
             return lRet
-        
-    @staticmethod
-    def sessionFromRequest(pRequest):
-        return pRequest.session
 
     @staticmethod
-    def Class(pUrlApis = None, pUrl = None, pId = None, pTimeOut = None, pNameSpace = None, pSession = None):
+    def Class(pUrlApis = None, pUrl = None, pId = None, pTimeOut = None, pNameSpace = None):
         
         if pId is not None and not isinstance(pId,str):
             raise ExtJSError('pId must be a string')            
@@ -64,13 +62,7 @@ class Ext(object):
             raise ExtJSError('pUrl must be a string')            
         
         if pUrlApis is not None and not isinstance(pUrlApis,str):
-            raise ExtJSError('pUrlApis must be a string')            
-        
-        if pSession is not None:
-            if isinstance(pSession,bool) and pSession == True:
-                pSession = Ext.sessionFromRequest
-            elif not inspect.isfunction(pSession):
-                raise ExtJSError('pSession must be method or boolean. If it\'s a method it must return a session object. If it\'s boolean with True it will return session from a django request.')
+            raise ExtJSError('pUrlApis must be a string')
 
         if pUrlApis is None:
             pUrlApis = 'api.js'
@@ -84,7 +76,7 @@ class Ext(object):
         lExt.NameSpace = pNameSpace
         
         def decorator(pClass):
-    
+
             if hasattr(pClass,'__ExtJS'):
                 raise ExtJSError('Class %s already register for ExtJS' % pClass.__name__)
             
@@ -113,72 +105,22 @@ class Ext(object):
                 if lExt.NameSpace is not None:
                     lUrl = lExt.NameSpace
                 
-            lExt.Url = 'Rpc' + lUrl    
+            #lExt.Url = 'Rpc' + lUrl
+            # Andr: removing Rpc prefix from URL for compatibility with existing Systemfox JS api
+            lExt.Url = lUrl
 
             if lExt.Url not in Ext.__URLSRPC:
                  Ext.__URLSRPC[lExt.Url] = dict()
                  
             Ext.__URLSRPC[lExt.Url][pClass.__name__] = pClass
             
-            if pClass not in Ext.__URLSAPI[lExt.UrlApis]: 
+            if pClass not in Ext.__URLSAPI[lExt.UrlApis]:
                 Ext.__URLSAPI[lExt.UrlApis].append(pClass)
             
             # Register methods
             lExt.StaticMethods = Ext.__METHODS
 
-            # Register events
-            lExt.StaticEvents = dict()
-
-            for lKey in Ext.__EVENTS:
-                lEvent = Ext.__EVENTS[lKey]
-                if lEvent.ClassName is None:
-                    lEvent.ClassName = pClass.__name__
-                if lEvent.NameSpace is None:
-                    lEvent.NameSpace = lExt.NameSpace
-                if lEvent.Url is None:
-                    lEvent.Url = 'Evt' + lEvent.NameSpace + lEvent.ClassName + lEvent.Name
-                if lEvent.UrlApis is None:
-                    lEvent.UrlApis = lExt.UrlApis
-                if lEvent.Url in Ext.__URLSEVT:     
-                    raise ExtJSError('Url "%s" for event "%s" already exist' % (lEvent.Url, lEvent.Name))
-                Ext.__URLSEVT[lEvent.Url] = pClass
-                if lEvent.UrlApis not in Ext.__URLSAPI:
-                    Ext.__URLSAPI[lEvent.UrlApis] = list()
-                if pClass not in Ext.__URLSAPI[lEvent.UrlApis]:
-                    Ext.__URLSAPI[lEvent.UrlApis].append(pClass)
-                lExt.StaticEvents[lEvent.Url] = lEvent
-            
-            # Apply a session method if the Session method is not already set by the method
-            if pSession is not None:
-                for lMethod in lExt.StaticMethods:
-                    lMethodInfo = lExt.StaticMethods[lMethod] 
-                    if lMethodInfo.Session is None:
-                        lParams = list(lMethodInfo.Args)
-                        if 'pSession' not in lParams:
-                            raise ExtJSError('Method \'%s\' must declare a parameter pSession' % lMethodInfo.Name)
-                        else:
-                            # Check if pSession is the first parameter
-                            if lParams.index('pSession') != 0:
-                                raise ExtJSError('Method \'%s\' pSession must be the first parameter' % lMethodInfo.Name)
-                            lParams = [lVal for lVal in lParams if lVal != 'pSession']
-                            lMethodInfo.Session = pSession
-                            lMethodInfo.Args = lParams
-                for lEvent in lExt.StaticEvents:
-                    lEventInfo = lExt.StaticEvents[lEvent] 
-                    if lEventInfo.Session is None:
-                        lParams = list(lEventInfo.Args)
-                        if 'pSession' not in lParams:
-                            raise ExtJSError('Event \'%s\' must declare a parameter pSession' % lEventInfo.Name)
-                        else:
-                            # Check if pSession is the first parameter
-                            if lParams.index('pSession') != 0:
-                                raise ExtJSError('Event \'%s\' pSession must be the first parameter' % lEventInfo.Name)
-                            lParams = [lVal for lVal in lParams if lVal != 'pSession']
-                            lEventInfo.Session = pSession
-                            lEventInfo.Args = lParams
-
             Ext.__METHODS = dict()
-            Ext.__EVENTS = dict()   
                 
             @functools.wraps(pClass)
             def wrapper(*pArgs, **pKwargs):
@@ -188,114 +130,16 @@ class Ext(object):
             return wrapper
     
         return decorator
-    
-    @staticmethod
-    def StaticEvent(pId = None, pEventName = None, pClassName = None, pNameSpace = None, pParams = None, pInterval = None, pUrl = None, pUrlApis = None, pSession = None):
-        
-        # Define the provider id that will be define on the javascript side
-        if pId is not None and not isinstance(pId,str):
-            raise ExtJSError('pId must be a string')            
-        
-        # Force the event name that will be fire on the javascript side. If it's not specify the event name it's build automatically with the concatanation of
-        # the name space, the classe name and the Python function name define as an event
-        if pEventName is not None and not isinstance(pEventName,str):
-            raise ExtJSError('pEventName must be a string')            
-
-        # You can overwrite the classe but becarefull. The class name will be use to build the name of the event when the answer of the event it sent back.
-        # If it's not specify it will take the name of the class
-        if pClassName is not None and not isinstance(pClassName,str):
-            raise ExtJSError('pClassName must be a string')            
-        
-        # pNameSpace is define to create a uniq name. Your must be sure it doesn't exist. If it's not specify it will take the name space of the class
-        if pNameSpace is not None and not isinstance(pNameSpace,str):
-            raise ExtJSError('pNameSpace must be a string')            
-        
-        # pInterval define how often to poll the server-side in milliseconds. If it's not define by default it's set to every 3 seconds by ExtJS. 
-        if pInterval is not None and not isinstance(pInterval,int):
-            raise ExtJSError('pInterval must be an integer')            
-        
-        # Specify the keywork for the URL. This keywork will be associate with the current event. The URL must be uniq for each event. 
-        # By default the URL it's build like this: 'Evt' + '<Name space>' + '<Class name>' + 'Event Name' 
-        if pUrl is not None and not isinstance(pUrl,str):
-            raise ExtJSError('pUrl must be a string')            
-
-        # Specify the javascript file. If it's not define it will take the same as one define for the class.
-        if pUrlApis is not None and not isinstance(pUrlApis,str):
-            raise ExtJSError('pUrlApis must be a string')            
-        
-        if pParams is not None and not (type(pParams) == list or type(pParams) == dict or type(pParams) == str or type(pParams) == int or type(pParams) == long or  type(pParams) == float):
-            raise ExtJSError('pParams must be a list, dict, string, int, long or float')
-
-        if pSession is not None:
-            if isinstance(pSession,bool) and pSession == True:
-                pSession = Ext.sessionFromRequest
-            elif not inspect.isfunction(pSession):
-                raise ExtJSError('pSession must be method or boolean. If it\'s a method it must return a session object. If it\'s boolean with True it will return session from a django request.')
-        
-        lEventInfo = Ext.__Instance()
-        
-        lEventInfo.UrlApis = pUrlApis
-        lEventInfo.Url = pUrl
-        lEventInfo.Id = pId
-        lEventInfo.EventName = pEventName
-        lEventInfo.ClassName = pClassName
-        lEventInfo.NameSpace = pNameSpace
-        lEventInfo.Params = pParams
-        lEventInfo.Interval = pInterval
-        lEventInfo.Session = pSession  
-        
-        def decorator(pEvent):
-    
-            if type(pEvent) == staticmethod:
-                raise ExtJSError('You must declare @staticmethod before @Ext.StaticEvent')
-    
-            lArgs = inspect.getargspec(pEvent)
-            lParams = list(lArgs.args)
-            
-            if lEventInfo.Session is not None:
-                if 'pSession' not in lArgs.args:
-                    raise ExtJSError('You must declare a parameter pSession')
-                else:
-                    # Remove pSession will be transmit automaticaly by the method Request
-                    if lParams != []:
-                        # Check if pSession is the first parameter
-                        if lParams.index('pSession') != 0:
-                            raise ExtJSError('pSession must be the first parameter')
-                        lParams = [lVal for lVal in lParams if lVal != 'pSession']
-                        
-            lEventInfo.Name = pEvent.__name__
-            lEventInfo.Args = lParams
-            lEventInfo.VarArgs = lArgs.varargs
-            lEventInfo.Keywords = lArgs.keywords
-            lEventInfo.Defaults = lArgs.defaults
-            lEventInfo.Call = pEvent
-            
-            Ext.__EVENTS[pEvent.__name__] = lEventInfo
-        
-            @functools.wraps(pEvent)
-            def wrapper(*pArgs, **pKwargs):
-                lRet = pEvent(*pArgs,**pKwargs)
-                return lRet
-                
-            return wrapper
-    
-        return decorator
 
     @staticmethod
-    def StaticMethod(pNameParams = False, pTypeParams = False, pSession = None):
+    def StaticMethod(pNameParams = False, pTypeParams = False):
 
         if not isinstance(pNameParams,bool):
             raise ExtJSError('pNameParams must be a bool. True method using naming parameters, False list of parameters')
         
         if not isinstance(pTypeParams,bool):
             raise ExtJSError('pTypeParams must be a bool. True method support type parameters, False type is not check')
-        
-        if pSession is not None:
-            if isinstance(pSession,bool) and pSession == True:
-                pSession = Ext.sessionFromRequest
-            elif not inspect.isfunction(pSession):
-                raise ExtJSError('pSession must be method or boolean. If it\'s a method it must return a session object. If it\'s boolean with True it will return session from a django request.')
-        
+                
         if sys.version_info < (3, 0) and pTypeParams == True:
             raise ExtJSError('Type for parameters not supported for Python %s. Must be Python 3.x' % ".".join(str(lVal) for lVal in sys.version_info))
         else:
@@ -305,7 +149,6 @@ class Ext(object):
         lMethodInfo = Ext.__Instance()
         lMethodInfo.NameParams = pNameParams
         lMethodInfo.TypeParams = pTypeParams
-        lMethodInfo.Session = pSession
         
         def decorator(pMethod):
     
@@ -313,18 +156,17 @@ class Ext(object):
                 raise ExtJSError('You must declare @staticmethod before @Ext.StaticMethod')
     
             lArgs = inspect.getargspec(pMethod)
-            lParams = list(lArgs.args)
+            lParams = list(lArgs.args)            
             
-            if lMethodInfo.Session is not None:
-                if 'pSession' not in lArgs.args:
-                    raise ExtJSError('You must declare a parameter pSession')
-                else:
-                    # Remove pSession will be transmit automaticaly by the method Request
-                    if lParams != []:
-                        # Check if pSession is the first parameter
-                        if lParams.index('pSession') != 0:
-                            raise ExtJSError('pSession must be the first parameter')
-                        lParams = [lVal for lVal in lParams if lVal != 'pSession']
+            if 'pRequest' not in lArgs.args:
+                raise ExtJSError('You must declare a parameter pRequest')
+            else:
+                # Remove pRequest will be transmit automaticaly by the method Request
+                if lParams != []:
+                    # Check if pRequest is the first parameter
+                    if lParams.index('pRequest') != 0:
+                        raise ExtJSError('pRequest must be the first parameter')
+                    lParams = [lVal for lVal in lParams if lVal != 'pRequest']
             
             lMethodInfo.Name = pMethod.__name__
             lMethodInfo.Args = lParams
@@ -346,21 +188,22 @@ class Ext(object):
 
     @staticmethod
     def Request(pRequest, pRootProject = None, pRootUrl = None, pIndex = 'index.html', pAlias = None):
+
         lRet = HttpResponse(status = 400, content = '<h1>HTTP 400 - Bad Request</h1>The request cannot be fulfilled due to bad syntax.')
 
-        # Remove http://<host name>:<port>/ from pRootUrl
-        pRootUrl = urlparse(pRootUrl).path
-
         # Valid the url. 
-        lPath = urlparse(pRequest.path).path
+        lPath = pRequest.path_info        
         lMatch = re.match('^/[0-9a-zA-Z\.\/\-\_]*$', lPath) 
     
         if lMatch is None:
             raise ExtJSError('You have some invalid characters on the Url: "%s"' % pRootUrl)
     
         if pRootUrl is not None:
+            # Remove http://<host name>:<port>/ from pRootUrl
+            pRootUrl = urlparse(pRootUrl).path
             # If the root for the url is specify check if the Url begin with this path
-            if lPath.find(pRootUrl) != 0:
+
+            if lPath.find(pRootUrl) != 0:                
                 raise ExtJSError('Invalid root for the Url: "%s"' % pRootUrl)
             # Remove url root from the path
             lPath = lPath[len(pRootUrl):]
@@ -369,11 +212,11 @@ class Ext(object):
             pRootUrl = ''
     
         # Detect if the URL it's to return javascript wrapper        
-        lUrlApis = re.search('^(\w*\.js)$', lPath)
-        
+        lUrlApis = re.search('^([\w\/-]*\.js)$', lPath)
+
         if lUrlApis is not None:
             lUrlApi = lUrlApis.group(1)
-            
+
             if lUrlApi in Ext.__URLSAPI:
                 # URL found => Generate javascript wrapper
                 lRemoteAPI = dict()
@@ -384,11 +227,6 @@ class Ext(object):
                         # Collect all class with the same Url
                         lRemoteAPI[lExt.Url] = dict()
                         lCurrent = lRemoteAPI[lExt.Url]
-                        if 'format' in pRequest.REQUEST and pRequest.REQUEST['format'] == 'json':
-                            # 'descriptor' is need it for Sencha Architect to recognize your API
-                            lCurrent['descriptor'] = lClass.__name__ + '.REMOTING_API'
-                            if lExt.NameSpace is not None:
-                                 lCurrent['descriptor'] = lExt.NameSpace + '.' + lCurrent['descriptor']
                         lCurrent['url'] = lExt.Url
                         lCurrent['type'] = 'remoting'
                         if lExt.Id is not None:
@@ -422,23 +260,12 @@ class Ext(object):
                                         #    },
                                         raise ExtJSError('Type for parameters not supported yet')
                             lRemoteMethods.append(lMethodExt)
-                        # Each class is define as an 'Action' 
-                        lAction[lClass.__name__] = lRemoteMethods
-                    for lKey in lExt.StaticEvents:
-                        # Each event is define as a Provider for ExtJS. Even if it share the same namespace.
-                        lEvent = lExt.StaticEvents[lKey]
-                        lRemote = dict()
-                        lRemote['url'] = lEvent.Url
-                        lRemote['type'] = 'polling'
-                        if lEvent.Id is not None:
-                            lRemote['id'] = lEvent.Id
-                        if lEvent.NameSpace is not None:
-                            lRemote['namespace'] = lEvent.NameSpace
-                        if lEvent.Params is not None:
-                            lRemote['baseParams'] = lEvent.Params
-                        if lEvent.Interval is not None:
-                            lRemote['interval'] = lEvent.Interval
-                        lRemoteAPI[lEvent.Url] = lRemote
+                        # Each class is define as an 'Action'
+                        lClassName = lClass.__name__
+                        #remove namespace suffix from class name
+                        if ACTION_SUFFIX is not None and lClassName.endswith(ACTION_SUFFIX):
+                            lClassName = lClass.__name__[:-len(ACTION_SUFFIX)]                        
+                        lAction[lClassName] = lRemoteMethods
 
                 if len(lRemoteAPI) > 0:    
                     lJsonRemoteAPI = json.dumps(lRemoteAPI.values(),default=ExtJsonHandler)
@@ -447,24 +274,18 @@ class Ext(object):
                     if lExt.NameSpace is not None:
                         lNameSpace = lExt.NameSpace + '.' + lNameSpace
                     
-                    if 'format' in pRequest.REQUEST and pRequest.REQUEST['format'] == 'json':
-                        # Define JSON format for Sencha Architect
-                        lContent = 'Ext.require(\'Ext.direct.*\');Ext.namespace(\''+ lNameSpace +'\');'+ lNameSpace + '.REMOTING_API = ' + lJsonRemoteAPI[1:len(lJsonRemoteAPI)-1] + ';'
-                    else:
-                        # Otherwise it's return a Javascript. Each javascript must be include under the index.html like this:
-                        # <script type="text/javascript" src="api.js"></script>
-                        # Automatically your API is declare on ExtJS and available on your app.js. 
-                        lContent = 'Ext.require(\'Ext.direct.*\');Ext.namespace(\''+ lNameSpace +'\');Ext.onReady( function() { Ext.direct.Manager.addProvider(' + lJsonRemoteAPI[1:len(lJsonRemoteAPI)-1] + ');});'
+                    lContent = 'Ext.direct.Manager.addProvider(' + lJsonRemoteAPI[1:len(lJsonRemoteAPI)-1] + ');'
+                        
+
                     lRet = HttpResponse(content = lContent, mimetype='application/javascript')
         else:
             # Detect if the URL it's a RPC or a Poll request
-            lUrlRPCsorPolls = re.search('^(\w*)$', lPath)
+            lUrlRPCsorPolls = re.search('^([\w\/-]*)$', lPath)
         
             if lUrlRPCsorPolls is not None:
                 lUrl = lUrlRPCsorPolls.group(1)
                 
                 if lUrl in Ext.__URLSRPC:
-                    
                     # URL recognize as a RPC
                     
                     # Extract data from raw post. We can not trust pRequest.POST
@@ -483,7 +304,7 @@ class Ext(object):
                     for lReceiveRPC in lReceiveRPCs:
                         # Execute each RPC request
                         
-                        lRcvClass = lReceiveRPC['action']
+                        lRcvClass = lReceiveRPC['action']+ACTION_SUFFIX
                         lRcvMethod = lReceiveRPC['method']
 
                         # Create name API
@@ -494,7 +315,7 @@ class Ext(object):
                         
                         # Prepare exception
                         lExceptionData = dict(Url = lUrl, Type = 'rpc', Tid = lReceiveRPC['tid'], Name = lMethodName )
-                        lException = dict(type = 'exception', data = lExceptionData, message = None)
+                        lException = dict(type = 'exception', data = lExceptionData, message = None)                        
                         
                         if lRcvClass in lClassesForUrl:
                             
@@ -525,10 +346,7 @@ class Ext(object):
                                     else:
                                         try:
                                             # Call method with no parameter
-                                            if lMethod.Session is None:
-                                                lRetMethod = lMethod.Call()
-                                            else:
-                                                lRetMethod = lMethod.Call(pSession = lMethod.Session(pRequest))
+                                            lRetMethod = lMethod.Call(pRequest = pRequest)                                                
                                             if lRetMethod is not None:
                                                 lAnswerRPC['result'] = lRetMethod
                                         except Exception as lErr:
@@ -539,11 +357,8 @@ class Ext(object):
                                     else:
                                         try:
                                             # Call method with list of parameters  
-                                            if lMethod.Session is None:
-                                                lRetMethod = lMethod.Call(*lArgs)
-                                            else:
-                                                lArgs.insert(0,lMethod.Session(pRequest))
-                                                lRetMethod = lMethod.Call(*lArgs)
+                                            lArgs.insert(0,pRequest)
+                                            lRetMethod = lMethod.Call(*lArgs)
                                             if lRetMethod is not None:
                                                 lAnswerRPC['result'] = lRetMethod
                                         except Exception as lErr:
@@ -564,11 +379,8 @@ class Ext(object):
                                             else:
                                                 try:
                                                     # Call method with naming parameters
-                                                    if lMethod.Session is None:
-                                                        lRetMethod = lMethod.Call(**lArgs)
-                                                    else:
-                                                        lArgs['pSession'] = lMethod.Session(pRequest)
-                                                        lRetMethod = lMethod.Call(**lArgs)
+                                                    lArgs['pRequest'] = pRequest
+                                                    lRetMethod = lMethod.Call(**lArgs)
                                                     if lRetMethod is not None:
                                                         lAnswerRPC['result'] = lRetMethod
                                                 except Exception as lErr:
@@ -589,123 +401,7 @@ class Ext(object):
                             lRet = HttpResponse(content = json.dumps(lContent[0],default=ExtJsonHandler), mimetype='application/json')
                         else:
                             lRet = HttpResponse(content = json.dumps(lContent,default=ExtJsonHandler), mimetype='application/json')
-                                
-                elif lUrl in Ext.__URLSEVT:
 
-                    # URL Recognize as Poll request. A poll request will be catch by an Ext.StaticEvent.
-                    
-                    lClass = Ext.__URLSEVT[lUrl]
-                    lExt = lClass.__ExtJS
-                    
-                    lEvent = lExt.StaticEvents[lUrl]
-                    
-                    # Define the name of the event this will be fire on ExtJS
-                    if lEvent.EventName is not None:
-                        # Use the one specify with @Ext.StaticEvent parameter pEventName
-                        lEventName = lEvent.Name
-                    else: 
-                        # This name is build with the concatanation of the name space, classe name and name event
-                        lEventName = lEvent.Name
-                        
-                        if len(lEvent.ClassName) != 0:
-                            lEventName = lEvent.ClassName + '.' + lEvent.Name
-                        
-                        if len(lEvent.NameSpace) != 0:
-                            lEventName = lEvent.NameSpace + '.' + lEventName
-                        
-                    # Prepare event answer
-                    lAnswerEvent = dict(type = 'event', name = lEventName, data = None)
-                    
-                    # Prepare exception 
-                    #  Data exception have the same structur as define for a method except we don't have Tid information. It set to -1. 
-                    lExceptionData = dict(Url = lUrl, Type = 'event', Tid = -1, Name = lEventName )
-                    lException = dict(type = 'exception', data = lExceptionData, message = None)
-                    
-                    # Add Id if it's define. With the id on your javascript code you can use something like this:
-                    # Ext.direct.Manager.on('exception', function(e) {
-                    # if (e.data.Type == 'event') 
-                    #    {
-                    #      lPoll = Ext.direct.Manager.getProvider(e.data.Id);
-                    #       lPoll.disconnect();
-                    #    }        
-                    # }
-                    if lEvent.Id is not None:
-                        lAnswerEvent['Id'] = lEvent.Id
-                        lExceptionData['Id'] = lEvent.Id
-                    
-                    # Extraction of parameters. For event parameters are in the POST. 
-                    # If for a key we don't have a value than mean we received a simple list of parameters direct under the key.
-                    # If the key have a value that mean we have naming parameters
-                    lArgs = None
-                    for lKey in pRequest.POST:
-                        if pRequest.POST[lKey] == '':
-                            if lArgs is None:
-                                lArgs = list()
-                            lArgs.extend(lKey.split(','))
-                        else:
-                            if lArgs is None:
-                                lArgs = dict()
-                            lArgs[lKey] = pRequest.POST[lKey] 
-                    
-                    # Control and call event  
-                    if lArgs is None:
-                        if len(lEvent.Args) != 0:
-                            lException['message'] = '%s numbers of parameters invalid' % lEventName
-                        else:
-                            try:
-                                # Call event with no parameter
-                                if lEvent.Session is None:
-                                    lRetEvt = lEvent.Call()
-                                else:
-                                    lRetEvt = lEvent.Call(pSession = lEvent.Session(pRequest))
-                                if lRetEvt is not None:
-                                    lAnswerEvent['data'] = lRetEvt
-                            except Exception as lErr:
-                                lException['message'] = '%s: %s' % (lEventName, str(lErr)) 
-                    elif type(lArgs) == list:
-                        if len(lArgs) > len(lEvent.Args):
-                            lException['message'] = '%s numbers of parameters invalid' % lEventName
-                        else:
-                            try:
-                                # Call event with list of parameters  
-                                if lEvent.Session is None:
-                                    lRetEvt = lEvent.Call(*lArgs)
-                                else:
-                                    lArgs.insert(0,lEvent.Session(pRequest))
-                                    lRetEvt = lEvent.Call(*lArgs)
-                                if lRetEvt is not None:
-                                    lAnswerEvent['data'] = lRetEvt
-                            except Exception as lErr:
-                                lException['message'] = '%s: %s' % (lEventName, str(lErr)) 
-                    elif type(lArgs) == dict:
-                        if len(lArgs.keys()) > len(lEvent.Args):
-                            lException['message'] = '%s numbers of parameters invalid' % lEventName
-                        else:
-                            lInvalidParam = list()
-                            for lParam in lArgs:
-                                if lParam not in lEvent.Args:
-                                     lInvalidParam.append(lParam)
-                            if len(lInvalidParam) > 0:
-                                lException['message'] = '%s: Parameters unknown -> %s' % ",".join(lInvalidParam) 
-                            else:
-                                try:
-                                    # Call event with naming parameters
-                                    if lEvent.Session is None:
-                                        lRetEvt = lEvent.Call(**lArgs)
-                                    else:
-                                        lArgs['pSession'] = lEvent.Session(pRequest)
-                                        lRetEvt = lEvent.Call(**lArgs)
-                                    if lRetEvt is not None:
-                                        lAnswerEvent['data'] = lRetEvt
-                                except Exception as lErr:
-                                    lException['message'] = '%s: %s' % (lEventName, str(lErr)) 
-                                
-                    if lException['message'] is not None:
-                        lContent = lException    
-                    else:
-                        lContent = lAnswerEvent
-                    
-                    lRet = HttpResponse(content = json.dumps(lContent,default=ExtJsonHandler), mimetype='application/json')
     
         if lRet.status_code != 200:
             # The URL is not to return the API, not to execute a RPC or an event. It's just to get a file
