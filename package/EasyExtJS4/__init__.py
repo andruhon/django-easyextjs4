@@ -277,7 +277,7 @@ class Ext(object):
                     lContent = 'Ext.direct.Manager.addProvider(' + lJsonRemoteAPI[1:len(lJsonRemoteAPI)-1] + ');'
                         
 
-                    lRet = HttpResponse(content = lContent, mimetype='application/javascript')
+                    lRet = HttpResponse(content = lContent, content_type='application/javascript')
         else:
             # Detect if the URL it's a RPC or a Poll request
             lUrlRPCsorPolls = re.search('^([\w\/-]*)$', lPath)
@@ -398,9 +398,9 @@ class Ext(object):
                             
                     if len(lContent) > 0:
                         if len(lContent) == 1:
-                            lRet = HttpResponse(content = json.dumps(lContent[0],default=ExtJsonHandler), mimetype='application/json')
+                            lRet = HttpResponse(content = json.dumps(lContent[0],default=ExtJsonHandler), content_type='application/json')
                         else:
-                            lRet = HttpResponse(content = json.dumps(lContent,default=ExtJsonHandler), mimetype='application/json')
+                            lRet = HttpResponse(content = json.dumps(lContent,default=ExtJsonHandler), content_type='application/json')
 
     
         if lRet.status_code != 200:
@@ -438,6 +438,6 @@ class Ext(object):
                     lFile = open(lPath)
                     lContent = lFile.read()
                     lFile.close()
-                    lRet = HttpResponse(content = lContent, mimetype = lMime)
+                    lRet = HttpResponse(content = lContent, content_type = lMime)
               
         return lRet
